@@ -11,19 +11,15 @@ namespace Repository.Tests
         private readonly List<string> Commodities = new List<string> { "GAS", "POWER" };
         private readonly List<string> Portfolios = new List<string> { "B2B", "B2C", "GE" };
 
-        protected bool ForceNoVariance = false;
-
         public virtual IEnumerator<object[]> GetEnumerator()
         {
-            var s = ForceNoVariance ? "x" : "";
-
             foreach (var country in Countries)
             {
                 foreach (var commodity in Commodities)
                 {
                     foreach (var portfolio in Portfolios)
                     {
-                        yield return new string[] { s + country, s + commodity, s + portfolio };
+                        yield return new object[] { country, commodity, portfolio };
                     }
                 }
             }
@@ -32,11 +28,33 @@ namespace Repository.Tests
         IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
     }
 
-    public class SegmentDataProviderNoVariants : SegmentDataProvider
+    public class SegmentAndVariantsDataProvider : SegmentDataProvider
     {
-        public SegmentDataProviderNoVariants()
+        public override IEnumerator<object[]> GetEnumerator()
         {
-            ForceNoVariance = true;
+            yield return new object[] { "be", "power", "b2b", new[] { nameof(TestModelWithVariants.GasType), nameof(TestModelWithVariants.ValueB2B), }};
+            yield return new object[] { "be", "power", "b2c", new[] { nameof(TestModelWithVariants.GasType), nameof(TestModelWithVariants.ValueB2B), }};
+            yield return new object[] { "be", "power", "ge",  new[] { nameof(TestModelWithVariants.GasType), nameof(TestModelWithVariants.ValueB2B), }};
+
+            yield return new object[] { "be", "gas",   "b2b", null};
+            yield return new object[] { "be", "gas",   "b2c", new[] { nameof(TestModelWithVariants.ValueB2B), }};
+            yield return new object[] { "be", "gas",   "ge",  new[] { nameof(TestModelWithVariants.ValueB2B), }};
+
+            yield return new object[] { "fr", "power", "b2b", new[] { nameof(TestModelWithVariants.GasType), nameof(TestModelWithVariants.ValueB2B), }};
+            yield return new object[] { "fr", "power", "b2c", new[] { nameof(TestModelWithVariants.GasType), nameof(TestModelWithVariants.ValueB2B), }};
+            yield return new object[] { "fr", "power", "ge",  new[] { nameof(TestModelWithVariants.GasType), nameof(TestModelWithVariants.ValueB2B), }};
+
+            yield return new object[] { "fr", "gas",   "b2b", null};
+            yield return new object[] { "fr", "gas",   "b2c", new[] { nameof(TestModelWithVariants.ValueB2B), }};
+            yield return new object[] { "fr", "gas",   "ge",  new[] { nameof(TestModelWithVariants.ValueB2B), }};
+
+            yield return new object[] { "de", "power", "b2b", new[] { nameof(TestModelWithVariants.GasType), nameof(TestModelWithVariants.ValueB2B), }};
+            yield return new object[] { "de", "power", "b2c", new[] { nameof(TestModelWithVariants.GasType), nameof(TestModelWithVariants.ValueB2B), }};
+            yield return new object[] { "de", "power", "ge",  new[] { nameof(TestModelWithVariants.GasType), nameof(TestModelWithVariants.ValueB2B), }};
+
+            yield return new object[] { "de", "gas",   "b2b", new[] { nameof(TestModelWithVariants.NoGermanGas), }};
+            yield return new object[] { "de", "gas",   "b2c", new[] { nameof(TestModelWithVariants.NoGermanGas), nameof(TestModelWithVariants.ValueB2B), }};
+            yield return new object[] { "de", "gas",   "ge",  new[] { nameof(TestModelWithVariants.NoGermanGas), nameof(TestModelWithVariants.ValueB2B), }};
         }
     }
 }

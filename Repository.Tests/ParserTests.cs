@@ -2,21 +2,16 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using Dapper.Contrib.Extensions;
-using MultiTableRepository.Attributes;
 using MultiTableRepository.Fluent;
 using MultiTableRepository.Parser;
 using Xunit;
 
 namespace Repository.Tests
 {
-    public class ParserTests
+    public partial class ParserTests
     {
-        private const string TABLE_PREFIX = "TABLE";
-        private const string SEG_SEP = "_";
-        private const int SEGMENT_INDEX_COUNTRY = 0;
-        private const int SEGMENT_INDEX_COMMODITY = 1;
-        private const int SEGMENT_INDEX_PORTFOLIO = 2;
+        public const string TABLE_PREFIX = "TABLE";
+        public const string SEG_SEP = "_";
 
         private class TestTableInfo : ITableInfo
         {
@@ -34,69 +29,66 @@ namespace Repository.Tests
             public IEnumerable<string> WritableColumns { get; set; }
         }
 
-        [MultiTable(TABLE_PREFIX)]
-        private class TestModel
-        {
-            [Key]
-            public int Id { get; set; }
-
-            [Segment(SEGMENT_INDEX_COUNTRY)]
-            public string Country { get; set; }
-
-            [Segment(SEGMENT_INDEX_COMMODITY)]
-            public string Commodity { get; set; }
-
-            [Segment(SEGMENT_INDEX_PORTFOLIO)]
-            public string Portfolio { get; set; }
-
-            public string Name { get; set; }
-
-            public double Value { get; set; }
-
-            [ExclusiveFor(null, "GAS")]
-            public string GasType { get; set; }
-
-            public double Ratio { get; set; }
-
-            [ExclusiveFor(null, null, "B2B")]
-            [IgnoreFor(null, "pOwEr")]
-            public double ValueB2B { get; set; }
-
-            [IgnoreFor("DE", "gas")]
-            public int NoGermanGas { get; set; }
-
-            public DateTime CreatedOn { get; set; }
-        }
-
         [Theory]
-        [InlineData("be", "power", "b2b", new[] { nameof(TestModel.GasType), nameof(TestModel.ValueB2B), })]
-        [InlineData("be", "power", "b2c", new[] { nameof(TestModel.GasType), nameof(TestModel.ValueB2B), })]
-        [InlineData("be", "power", "ge",  new[] { nameof(TestModel.GasType), nameof(TestModel.ValueB2B), })]
-
-        [InlineData("be", "gas",   "b2b", null)]
-        [InlineData("be", "gas",   "b2c", new[] { nameof(TestModel.ValueB2B), })]
-        [InlineData("be", "gas",   "ge",  new[] { nameof(TestModel.ValueB2B), })]
-
-        [InlineData("fr", "power", "b2b", new[] { nameof(TestModel.GasType), nameof(TestModel.ValueB2B), })]
-        [InlineData("fr", "power", "b2c", new[] { nameof(TestModel.GasType), nameof(TestModel.ValueB2B), })]
-        [InlineData("fr", "power", "ge",  new[] { nameof(TestModel.GasType), nameof(TestModel.ValueB2B), })]
-
-        [InlineData("fr", "gas",   "b2b", null)]
-        [InlineData("fr", "gas",   "b2c", new[] { nameof(TestModel.ValueB2B), })]
-        [InlineData("fr", "gas",   "ge",  new[] { nameof(TestModel.ValueB2B), })]
-
-        [InlineData("de", "power", "b2b", new[] { nameof(TestModel.GasType), nameof(TestModel.ValueB2B), })]
-        [InlineData("de", "power", "b2c", new[] { nameof(TestModel.GasType), nameof(TestModel.ValueB2B), })]
-        [InlineData("de", "power", "ge",  new[] { nameof(TestModel.GasType), nameof(TestModel.ValueB2B), })]
-
-        [InlineData("de", "gas",   "b2b", new[] { nameof(TestModel.NoGermanGas), })]
-        [InlineData("de", "gas",   "b2c", new[] { nameof(TestModel.NoGermanGas), nameof(TestModel.ValueB2B), })]
-        [InlineData("de", "gas",   "ge",  new[] { nameof(TestModel.NoGermanGas), nameof(TestModel.ValueB2B), })]
-        public void GetTableInformation_ValidSegments_ReturnsTableInfo(
-            string country, string commodity, string portfolio, string[] ignoredColumns = null)
+        [ClassData(typeof(SegmentAndVariantsDataProvider))]
+        public void GetTableInformation_SegmenstsWithVariants(string country, string commodity, string portfolio, string[] ignore = null)
         {
             var segments = new string[] { country, commodity, portfolio };
-            var expected = MockTableInfo(segments, ignoredColumns);
+            var expected = MockTableInfo<TestModelWithVariants>(segments, ignore);
+
+            var result = MultiTableParserV2.GetTableInformation<TestModelWithVariants>(segments);
+
+            Assert.NotNull(result);
+            Assert.NotNull(result.TableName);
+            Assert.Equal(expected.EntityType, result.EntityType);
+            Assert.Equal(expected.TableName, result.TableName);
+            Assert.Equal(expected.TablePrefix, result.TablePrefix);
+            Assert.Equal(expected.TableSuffix, result.TableSuffix);
+            Assert.Equal(expected.KeyProperty, result.KeyProperty);
+            Assert.Equal(expected.KeyColumn, result.KeyColumn);
+            Assert.Equal(expected.AllProperties, result.AllProperties);
+            Assert.Equal(expected.WritableProperties, result.WritableProperties);
+            Assert.Equal(expected.AllColumns, result.AllColumns);
+            Assert.Equal(expected.WritableColumns, result.WritableColumns);
+        }
+
+
+        [Theory]
+        [ClassData(typeof(SegmentAndVariantsDataProvider))]
+        public void GetTableInformation_EntityWithVariants(string country, string commodity, string portfolio, string[] ignore = null)
+        {
+            var segments = new string[] { country, commodity, portfolio };
+            var expected = MockTableInfo<TestModelWithVariants>(segments, ignore);
+            var entity = new TestModelWithVariants
+            {
+                Country = country,
+                Commodity = commodity,
+                Portfolio = portfolio
+            };
+
+            var result = MultiTableParserV2.GetTableInformation(entity);
+
+            Assert.NotNull(result);
+            Assert.NotNull(result.TableName);
+            Assert.Equal(expected.EntityType, result.EntityType);
+            Assert.Equal(expected.TableName, result.TableName);
+            Assert.Equal(expected.TablePrefix, result.TablePrefix);
+            Assert.Equal(expected.TableSuffix, result.TableSuffix);
+            Assert.Equal(expected.KeyProperty, result.KeyProperty);
+            Assert.Equal(expected.KeyColumn, result.KeyColumn);
+            Assert.Equal(expected.AllProperties, result.AllProperties);
+            Assert.Equal(expected.WritableProperties, result.WritableProperties);
+            Assert.Equal(expected.AllColumns, result.AllColumns);
+            Assert.Equal(expected.WritableColumns, result.WritableColumns);
+        }
+
+
+        [Theory]
+        [ClassData(typeof(SegmentDataProvider))]
+        public void GetTableInformation_SegmentsNoVariants(string country, string commodity, string portfolio)
+        {
+            var segments = new string[] { country, commodity, portfolio };
+            var expected = MockTableInfo<TestModel>(segments);
 
             var result = MultiTableParserV2.GetTableInformation<TestModel>(segments);
 
@@ -114,27 +106,55 @@ namespace Repository.Tests
             Assert.Equal(expected.WritableColumns, result.WritableColumns);
         }
 
+
+        [Theory]
+        [ClassData(typeof(SegmentDataProvider))]
+        public void GetTableInformation_EntityNoVariants(string country, string commodity, string portfolio)
+        {
+            var segments = new string[] { country, commodity, portfolio };
+            var expected = MockTableInfo<TestModel>(segments);
+            var entity = new TestModel
+            {
+                Country = country,
+                Commodity = commodity,
+                Portfolio = portfolio
+            };
+
+            var result = MultiTableParserV2.GetTableInformation(entity);
+
+            Assert.NotNull(result);
+            Assert.NotNull(result.TableName);
+            Assert.Equal(expected.EntityType, result.EntityType);
+            Assert.Equal(expected.TableName, result.TableName);
+            Assert.Equal(expected.TablePrefix, result.TablePrefix);
+            Assert.Equal(expected.TableSuffix, result.TableSuffix);
+            Assert.Equal(expected.KeyProperty, result.KeyProperty);
+            Assert.Equal(expected.KeyColumn, result.KeyColumn);
+            Assert.Equal(expected.AllProperties, result.AllProperties);
+            Assert.Equal(expected.WritableProperties, result.WritableProperties);
+            Assert.Equal(expected.AllColumns, result.AllColumns);
+            Assert.Equal(expected.WritableColumns, result.WritableColumns);
+        }
+
+
         #region Helper methods
 
-        private ITableInfo MockTableInfo(string[] segments, string[] ignoredColumns)
+        private ITableInfo MockTableInfo<T>(string[] segments, string[] ignoredColumns = null)
         {
-            var type = typeof(TestModel);
+            var type = typeof(T);
 
             var allProps = type.GetProperties().ToList();
             allProps.RemoveAll(p => ignoredColumns?.Contains(p.Name) ?? false);
 
             var wriProps = allProps.ToList();
-            wriProps.RemoveAll(p => p.Name == nameof(TestModel.Id) ||
-                                    p.Name == nameof(TestModel.Country) ||
-                                    p.Name == nameof(TestModel.Commodity) ||
-                                    p.Name == nameof(TestModel.Portfolio));
+            wriProps.RemoveAll(p => p.Name == "Id" || p.Name == "Country" || p.Name == "Commodity" || p.Name == "Portfolio");
 
             return new TestTableInfo
             {
-                EntityType = typeof(TestModel),
+                EntityType = typeof(T),
                 AllProperties = allProps,
                 WritableProperties = wriProps,
-                KeyProperty = allProps.FirstOrDefault(p => p.Name == nameof(TestModel.Id)),
+                KeyProperty = allProps.FirstOrDefault(p => p.Name == "Id"),
                 TablePrefix = TABLE_PREFIX,
                 TableSuffix = GetSuffix(segments),
                 AllColumns = allProps.Select(p => p.Name).ToList(),
