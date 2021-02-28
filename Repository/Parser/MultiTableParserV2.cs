@@ -31,7 +31,7 @@ namespace MultiTableRepository.Parser
             public Dictionary<PropertyInfo, IEnumerable<string[]>> IgnoredSegments { get; set; }
             public Dictionary<PropertyInfo, IEnumerable<string[]>> ExclusiveSegments { get; set; }
 
-            public Dictionary<string, CacheItem> Items { get; set; }
+            public Dictionary<string, CacheItem> Items { get; set; } = new Dictionary<string, CacheItem>();
         }
 
         private class CacheItem : ITableInfo
@@ -90,7 +90,7 @@ namespace MultiTableRepository.Parser
                 }
                 else
                 {
-                    return CreateCacheItem(parent, segements);
+                    return CreateAndCacheItem(parent, segements);
                 }
             }
             else
@@ -123,7 +123,7 @@ namespace MultiTableRepository.Parser
                 }
                 else
                 {
-                    return CreateCacheItem(parent, segments);
+                    return CreateAndCacheItem(parent, segments);
                 }
             }
             else
@@ -189,7 +189,7 @@ namespace MultiTableRepository.Parser
 
                 // Variable columns (Ignored and exclusive)
                 var ignoredSegments = info.GetCustomAttributes<IgnoreForAttribute>(false).Select(a => a.Segments);
-                var exclusiveSegments = info.GetCustomAttributes<IgnoreForAttribute>(false).Select(a => a.Segments);
+                var exclusiveSegments = info.GetCustomAttributes<ExclusiveForAttribute>(false).Select(a => a.Segments);
 
                 if (ignoredSegments.Any())
                 {
@@ -247,7 +247,7 @@ namespace MultiTableRepository.Parser
                 ExclusiveSegments = exclusiveProps,
             };
 
-            var item = CreateCacheItem(header, segments);
+            var item = CreateAndCacheItem(header, segments);
 
             //Main entry
             Cache.Add(type, header);
@@ -255,7 +255,7 @@ namespace MultiTableRepository.Parser
             return item;
         }
 
-        private static CacheItem CreateCacheItem(CacheHeader parent, string[] segments) // TODO: Move to CacheHeader class when decopling
+        private static CacheItem CreateAndCacheItem(CacheHeader parent, string[] segments) // TODO: Move to CacheHeader class when decopling
         {
             if (segments == null || segments.Length != parent.Segments.Count) //TODO: Optional segments?
             {
@@ -268,10 +268,10 @@ namespace MultiTableRepository.Parser
             {
                 TableName = parent.TablePrefix + SEGMENT_SEPARATOR + suffix,
                 TableSuffix = suffix,
-                AllColumns = parent.AllColumns,
-                WritableColumns = parent.WritableColumns,
-                WritableProperties = parent.WritableProperties,
-                AllProperties = parent.AllProperties,
+                AllColumns = parent.AllColumns.ToList(),
+                WritableColumns = parent.WritableColumns.ToList(),
+                WritableProperties = parent.WritableProperties.ToList(),
+                AllProperties = parent.AllProperties.ToList(),
                 SqlTemplates = new SqlParts(),
             };
 
@@ -298,6 +298,11 @@ namespace MultiTableRepository.Parser
             var removed = new List<PropertyInfo>();
             foreach (var prop in item.AllProperties)
             {
+                if (removed.Contains(prop))
+                {
+                    continue;
+                }
+
                 // If segments match, remove this property
                 if (item.Parent.IgnoredSegments.TryGetValue(prop, out var ignoredSegments))
                 {
@@ -318,7 +323,7 @@ namespace MultiTableRepository.Parser
                                 continue;
                             }
 
-                            ignore = ignore && (seg[i] == segments[i]);
+                            ignore = ignore && (seg[i].Equals(segments[i], StringComparison.OrdinalIgnoreCase));
                         }
 
                         ignoreProp = ignoreProp || ignore;
@@ -351,7 +356,7 @@ namespace MultiTableRepository.Parser
                                 continue;
                             }
 
-                            keep = keep && (exSegs[i] == segments[i]);
+                            keep = keep && (exSegs[i].Equals(segments[i], StringComparison.OrdinalIgnoreCase));
                         }
 
                         keepProp = keepProp || keep;
@@ -374,8 +379,13 @@ namespace MultiTableRepository.Parser
                 wri.Remove(prop);
             }
 
-            item.AllProperties = all;
-            item.WritableProperties = wri;
+            if (all.Count != item.AllProperties.Count())
+            {
+                item.AllProperties = all;
+                item.AllColumns = all.Select(p => p.Name).ToList();
+                item.WritableProperties = wri;
+                item.WritableColumns = wri.Select(p => p.Name).ToList();
+            }
         }
 
         private static void BuildSqlTextTemplates(CacheItem item) // TODO: Move to CacheItem class when decopling

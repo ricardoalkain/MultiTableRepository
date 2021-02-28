@@ -5,6 +5,9 @@ using System.Data.SqlClient;
 using System.Linq;
 using System.Reflection;
 using System.Text;
+using Dapper;
+using Dapper.Contrib.Extensions;
+using MultiTableRepository.Attributes;
 
 namespace MultiTableRepository.DemoApp
 {
