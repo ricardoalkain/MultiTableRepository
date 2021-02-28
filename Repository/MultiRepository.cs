@@ -3,10 +3,10 @@ using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
 using System.Data.SqlClient;
-using MultiTableRepository.FluentSql;
-using MultiTableRepository.Parser;
+using MultiTableRepository.Fluent;
+using MultiTableRepository.Parser.V1;
 
-namespace FluentSql.Repositories
+namespace MultiTableRepository.Repositories
 {
     public /*abstract*/ class MultiRepository<T> : IDisposable /*, IReadOperationsRepository<T>, IWriteOperationsRepository<T>*/ where T : class /*, ICreated*/
     {
@@ -52,13 +52,13 @@ namespace FluentSql.Repositories
         protected IFluentSql<T> For(params string[] segments)
         {
             var info = MultiTableParser.GetTableInfo(typeof(T), segments);
-            return FluentSql.CreateFluentSql<T>(Connection, info);
+            return FluentSql.CreateFluentSql<T>(Connection, info as Fluent.ITableInfo);
         }
 
         protected IFluentSqlAutoExec<T> For(T entity)
         {
             var info = MultiTableParser.GetTableInfo(entity);
-            return FluentSql.CreateFluentSql<T>(Connection, info, entity);
+            return FluentSql.CreateFluentSql<T>(Connection, info as Fluent.ITableInfo, entity);
         }
 
         protected IFluentSqlAutoExec<T> ForMany(IEnumerable<T> entities)

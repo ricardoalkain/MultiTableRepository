@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace MultiTableRepository.FluentSql
+namespace MultiTableRepository.Fluent
 {
     public interface IFluentSqlWriter
     {

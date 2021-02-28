@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Text;
 using Dapper;
 
-namespace MultiTableRepository.FluentSql.Implementation
+namespace MultiTableRepository.Fluent.Implementation
 {
     internal class FluentSqlInsert<T> : BaseFluentSql<IFluentSqlInsert<T>>, IFluentSqlInsert<T>
     {

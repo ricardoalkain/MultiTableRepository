@@ -1,6 +1,9 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using System.Data;
+using System.Reflection;
 
-namespace MultiTableRepository.FluentSql
+namespace MultiTableRepository.Fluent
 {
     public interface IFluentSql<T>
     {

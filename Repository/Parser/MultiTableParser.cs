@@ -4,14 +4,15 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 using Dapper.Contrib.Extensions;
+using MultiTableRepository.Attributes;
+using MultiTableRepository.Parser.V1;
 
-namespace MultiTableRepository.Parser
+namespace MultiTableRepository.Parser.V1
 {
-
-
+    [Obsolete]
     public static class MultiTableParser
     {
-        private class TableInfo : ITableInfo  //TODO: Join with CacheEntry
+        private class TableInfo : ITableInfoV1  //TODO: Join with CacheEntry
         {
             private readonly CacheEntry cached;
 
@@ -72,7 +73,7 @@ namespace MultiTableRepository.Parser
 
             public bool HasVariants { get; set; }
 
-            public Dictionary<string, ITableInfo> Variants = new Dictionary<string, ITableInfo>(); //TODO: Create only if needed
+            public Dictionary<string, ITableInfoV1> Variants = new Dictionary<string, ITableInfoV1>(); //TODO: Create only if needed
 
         }
 
@@ -86,8 +87,8 @@ namespace MultiTableRepository.Parser
         /// </summary>
         /// <param name="type">Type of entities associated to the table.</param>
         /// <param name="segments">List of strings used to separate data in different individual tables.</param>
-        /// <returns><see cref="ITableInfo"/> object containing information about the tables and columns.</returns>
-        public static ITableInfo GetTableInfo(Type type, params string[] segments)
+        /// <returns><see cref="ITableInfoV1"/> object containing information about the tables and columns.</returns>
+        public static ITableInfoV1 GetTableInfo(Type type, params string[] segments)
         {
             if (Cache.TryGetValue(type, out CacheEntry entry))
             {
@@ -113,8 +114,8 @@ namespace MultiTableRepository.Parser
         /// and how the respective columns are configured.
         /// </summary>
         /// <typeparam name="T">Type of entities associated to the table.</typeparam>
-        /// <returns><see cref="ITableInfo"/> object containing information about the tables and columns.</returns>
-        public static ITableInfo GetTableInfo<T>()
+        /// <returns><see cref="ITableInfoV1"/> object containing information about the tables and columns.</returns>
+        public static ITableInfoV1 GetTableInfo<T>()
         {
             return GetTableInfo(default(T));
         }
@@ -125,8 +126,8 @@ namespace MultiTableRepository.Parser
         /// </summary>
         /// <typeparam name="T">Type of entities associated to the table.</typeparam>
         /// <param name="entity">Object containing segment properties to define which table it belongs to.</param>
-        /// <returns><see cref="ITableInfo"/> object containing information about the tables and columns.</returns>
-        public static ITableInfo GetTableInfo<T>(T entity)
+        /// <returns><see cref="ITableInfoV1"/> object containing information about the tables and columns.</returns>
+        public static ITableInfoV1 GetTableInfo<T>(T entity)
         {
             var type = typeof(T);
 
@@ -271,13 +272,13 @@ namespace MultiTableRepository.Parser
             return cacheEntry;
         }
 
-        private static ITableInfo ParseTypeAndSegments<T>(T entity)
+        private static ITableInfoV1 ParseTypeAndSegments<T>(T entity)
         {
             var segments = GetSegments(entity);
             return ParseTypeAndSegments(typeof(T), segments);
         }
 
-        private static ITableInfo ParseTypeAndSegments(Type type, params string[] segments)
+        private static ITableInfoV1 ParseTypeAndSegments(Type type, params string[] segments)
         {
             if (!Cache.TryGetValue(type, out var info))
             {
@@ -345,7 +346,7 @@ namespace MultiTableRepository.Parser
 
             if (info.Variants == null)
             {
-                info.Variants = new Dictionary<string, ITableInfo>();
+                info.Variants = new Dictionary<string, ITableInfoV1>();
             }
 
             var variant = new TableInfo(newEntry, tableSuffix);
@@ -386,12 +387,12 @@ namespace MultiTableRepository.Parser
         {
             if (entity == null) return null;
 
-            return string.Join('_', GetSegments(entity, entry));
+            return string.Join("_", GetSegments(entity, entry));
         }
 
         private static string GetTableSuffix(params string[] segments)
         {
-            return string.Join('_', segments).ToUpper();
+            return string.Join("_", segments).ToUpper();
         }
     }
 }

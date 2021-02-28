@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 
-namespace MultiTableRepository.FluentSql
+namespace MultiTableRepository.Fluent
 {
     public interface IFluentSqlSelect<T> : IFluentSqlBase<IFluentSqlSelect<T>>, IFluentWhere<IFluentSqlSelect<T>>
     {

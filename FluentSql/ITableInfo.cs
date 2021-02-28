@@ -2,25 +2,24 @@
 using System.Collections.Generic;
 using System.Reflection;
 
-namespace MultiTableRepository.FluentSql
+namespace MultiTableRepository.Fluent
 {
     public interface ITableInfo
     {
-        Type EntityType { get; set; }
+        Type EntityType { get; }
 
-        string TableName { get; set; }
-        string TablePrefix { get; set; }
-        string TableSuffix { get; set; }
-        string KeyColumn { get; set; }
-        IEnumerable<string> AllColumns { get; set; }
-        IEnumerable<string> WritableColumns { get; set; }
+        string TableName { get; }
+        string TablePrefix { get; }
+        string TableSuffix { get; }
+        string KeyColumn { get; }
+        IEnumerable<string> WritableColumns { get; }
+        IEnumerable<string> AllColumns { get; }
 
-        PropertyInfo KeyProp { get; set; }
-        IEnumerable<PropertyInfo> SegmentProps { get; set; }
-        IEnumerable<PropertyInfo> DataProps { get; set; }
-        IEnumerable<PropertyInfo> AllProps { get; set; }
+        PropertyInfo KeyProperty { get; }
+        IEnumerable<PropertyInfo> WritableProperties { get; }
+        IEnumerable<PropertyInfo> AllProperties { get; }
 
-        SqlParts SqlTemplates { get; set; }
+        SqlParts SqlTemplates { get; }
     }
 
     /// <summary>

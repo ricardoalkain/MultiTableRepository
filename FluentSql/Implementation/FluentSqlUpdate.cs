@@ -2,7 +2,7 @@
 using System.Text;
 using Dapper;
 
-namespace MultiTableRepository.FluentSql.Implementation
+namespace MultiTableRepository.Fluent.Implementation
 {
     internal class FluentSqlUpdate<T> : BaseFluentSql<IFluentSqlUpdate<T>>, IFluentSqlUpdate<T>
     {
@@ -73,7 +73,7 @@ namespace MultiTableRepository.FluentSql.Implementation
             sql.Append("SET ");
             if (string.IsNullOrWhiteSpace(Context.Columns))
             {
-                sql.AppendLine(Context.TableInfo.SqlUpdateColumnsText);
+                sql.AppendLine(Context.TableInfo.SqlTemplates.UpdateSetColumns);
             }
             else
             {

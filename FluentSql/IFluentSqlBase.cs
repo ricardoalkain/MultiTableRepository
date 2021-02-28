@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using Dapper;
 
-namespace MultiTableRepository.FluentSql
+namespace MultiTableRepository.Fluent
 {
     public interface IFluentSqlBase<T>
     {

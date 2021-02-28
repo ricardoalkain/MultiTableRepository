@@ -2,7 +2,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace MultiTableRepository.FluentSql.Implementation
+namespace MultiTableRepository.Fluent.Implementation
 {
     internal abstract class BaseFluentSql<T> : IFluentSqlBase<T>
     {

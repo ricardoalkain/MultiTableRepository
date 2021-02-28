@@ -2,7 +2,7 @@
 using System.Data;
 using Dapper;
 
-namespace MultiTableRepository.FluentSql.Implementation
+namespace MultiTableRepository.Fluent.Implementation
 {
     internal enum SqlOperation
     {

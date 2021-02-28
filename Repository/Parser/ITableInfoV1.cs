@@ -2,9 +2,10 @@
 using System.Collections.Generic;
 using System.Reflection;
 
-namespace MultiTableRepository.Parser
+namespace MultiTableRepository.Parser.V1
 {
-    public interface ITableInfo
+    [Obsolete]
+    public interface ITableInfoV1
     {
         /// <summary>
         /// Class configured for this group of tables.

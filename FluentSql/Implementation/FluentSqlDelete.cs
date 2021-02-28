@@ -2,7 +2,7 @@
 using System.Text;
 using Dapper;
 
-namespace MultiTableRepository.FluentSql.Implementation
+namespace MultiTableRepository.Fluent.Implementation
 {
     //TODO: Update and Delete are too similar
 

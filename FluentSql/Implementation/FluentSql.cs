@@ -2,27 +2,29 @@
 using System.Collections.Generic;
 using System.Data;
 using System.Reflection;
+using MultiTableRepository.Fluent.Implementation;
 
-namespace MultiTableRepository.FluentSql
+namespace MultiTableRepository.Fluent
 {
-    internal class FluentSql
+    public class FluentSql
     {
         public const string SEPARATOR = ", ";
 
-        public static IFluentSql<T> CreateFluentSql<T>(IDbConnection connection, ITableInfo tableInfo) where T: class
+        public static IFluentSql<T> CreateFluentSql<T>(IDbConnection connection, ITableInfo tableInfo) where T : class
         {
-            var ctor = typeof(FluentSql<T>).GetConstructor(BindingFlags.NonPublic | BindingFlags.Instance, null, new Type[]{ typeof(IDbConnection), typeof(ITableInfo) }, null);
+            var ctor = typeof(FluentSql<T>).GetConstructor(BindingFlags.NonPublic | BindingFlags.Instance, null, new Type[] { typeof(IDbConnection), typeof(ITableInfo) }, null);
             return (FluentSql<T>)(ctor.Invoke(new object[] { connection, tableInfo }));
         }
 
-        public static IFluentSqlAutoExec<T> CreateFluentSql<T>(IDbConnection connection, ITableInfo tableInfo, T entity) where T: class
+        public static IFluentSqlAutoExec<T> CreateFluentSql<T>(IDbConnection connection, ITableInfo tableInfo, T entity) where T : class
         {
             var ctor = typeof(FluentSqlAutoExec<T>).GetConstructor(
                 BindingFlags.NonPublic | BindingFlags.Instance, null,
-                new Type[]{ typeof(IDbConnection), typeof(ITableInfo), typeof(T) }, null);
+                new Type[] { typeof(IDbConnection), typeof(ITableInfo), typeof(T) }, null);
             return (FluentSqlAutoExec<T>)(ctor.Invoke(new object[] { connection, tableInfo, entity }));
         }
     }
+
 
     internal class FluentSql<T> : IFluentSql<T> where T : class
     {
@@ -44,15 +46,15 @@ namespace MultiTableRepository.FluentSql
         public IFluentSqlSelect<T> Select()
         {
             Context.Operation = SqlOperation.SELECT;
-            Context.Columns = Context.TableInfo.SqlSelectColumnsText;
+            Context.Columns = Context.TableInfo.SqlTemplates.SelectColumns;
             return FLuentSqlSelect<T>.Chain<T>(Context);
         }
 
         public IFluentSqlInsert<T> Insert()
         {
             Context.Operation = SqlOperation.INSERT;
-            Context.Columns = Context.TableInfo.SqlInsertColumnNames;
-            Context.ValueClause = Context.TableInfo.SqlInsertColumnValues;
+            Context.Columns = Context.TableInfo.SqlTemplates.InsertColumnNames;
+            Context.ValueClause = Context.TableInfo.SqlTemplates.InsertColumnValues;
             return FluentSqlInsert<T>.Chain<T>(Context);
         }
 
@@ -85,7 +87,7 @@ namespace MultiTableRepository.FluentSql
         public IEnumerable<T> Select(params string[] conditions)
         {
             Context.Operation = SqlOperation.SELECT;
-            Context.Columns = Context.TableInfo.SqlSelectColumnsText;
+            Context.Columns = Context.TableInfo.SqlTemplates.SelectColumns;
             Context.Where.AddRange(conditions);
             return FLuentSqlSelect<T>.Chain<T>(Context).Query();
         }
@@ -94,8 +96,8 @@ namespace MultiTableRepository.FluentSql
         {
             Context.Entity = ContextEntity;
             Context.Operation = SqlOperation.INSERT;
-            Context.Columns = Context.TableInfo.SqlInsertColumnNames;
-            Context.ValueClause = Context.TableInfo.SqlInsertColumnValues;
+            Context.Columns = Context.TableInfo.SqlTemplates.InsertColumnNames;
+            Context.ValueClause = Context.TableInfo.SqlTemplates.InsertColumnValues;
             return FluentSqlInsert<T>.Chain<T>(Context).Execute() > 0;
         }
 
@@ -103,8 +105,8 @@ namespace MultiTableRepository.FluentSql
         {
             Context.Entity = ContextEntity;
             Context.Operation = SqlOperation.INSERT;
-            Context.Columns = Context.TableInfo.SqlInsertColumnNames;
-            Context.ValueClause = Context.TableInfo.SqlInsertColumnValues;
+            Context.Columns = Context.TableInfo.SqlTemplates.InsertColumnNames;
+            Context.ValueClause = Context.TableInfo.SqlTemplates.InsertColumnValues;
             return FluentSqlInsert<T>.Chain<T>(Context).ExecuteAndGetId();
         }
 
@@ -126,7 +128,7 @@ namespace MultiTableRepository.FluentSql
                 .Execute() > 0;
         }
 
-        private object GetEntityKeyValue<T>(T entity)
+        private object GetEntityKeyValue(T entity)
         {
             if (entity == null)
             {

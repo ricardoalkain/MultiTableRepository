@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 
-namespace MultiTableRepository.FluentSql
+namespace MultiTableRepository.Fluent
 {
     public interface IFluentSqlInsert<T> : IFluentSqlBase<IFluentSqlInsert<T>>, IFluentSqlWriter
     {

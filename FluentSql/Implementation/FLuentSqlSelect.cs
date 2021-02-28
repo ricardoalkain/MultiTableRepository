@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using Dapper;
 
-namespace MultiTableRepository.FluentSql.Implementation
+namespace MultiTableRepository.Fluent.Implementation
 {
     internal class FLuentSqlSelect<T> : BaseFluentSql<IFluentSqlSelect<T>>, IFluentSqlSelect<T>
     {
