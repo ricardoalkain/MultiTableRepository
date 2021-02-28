@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace MultiTableRepositoryTest.Extensions.FluentSql
+namespace MultiTableRepository.FluentSql
 {
     public interface IFluentWhere<T>
     {

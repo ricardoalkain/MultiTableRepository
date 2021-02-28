@@ -1,4 +1,4 @@
-﻿namespace MultiTableRepositoryTest.Extensions.FluentSql
+﻿namespace MultiTableRepository.FluentSql
 {
     public interface IFluentSqlUpdate<T> : IFluentSqlBase<IFluentSqlUpdate<T>>, IFluentSqlWriter, IFluentWhere<IFluentSqlUpdate<T>>
     {

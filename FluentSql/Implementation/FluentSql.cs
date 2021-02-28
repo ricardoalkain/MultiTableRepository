@@ -1,11 +1,9 @@
-﻿using MultiTableRepositoryTest.Extensions.FluentSql.Implementation;
-using MultiTableRepositoryTest.Extensions.Parser;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Reflection;
 
-namespace MultiTableRepositoryTest.Extensions.FluentSql
+namespace MultiTableRepository.FluentSql
 {
     internal class FluentSql
     {

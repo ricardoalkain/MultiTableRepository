@@ -1,7 +1,7 @@
-﻿using Dapper;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
+using Dapper;
 
-namespace MultiTableRepositoryTest.Extensions.FluentSql
+namespace MultiTableRepository.FluentSql
 {
     public interface IFluentSqlBase<T>
     {

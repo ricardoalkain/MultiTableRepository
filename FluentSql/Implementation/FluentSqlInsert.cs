@@ -1,9 +1,9 @@
-﻿using Dapper;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using Dapper;
 
-namespace MultiTableRepositoryTest.Extensions.FluentSql.Implementation
+namespace MultiTableRepository.FluentSql.Implementation
 {
     internal class FluentSqlInsert<T> : BaseFluentSql<IFluentSqlInsert<T>>, IFluentSqlInsert<T>
     {

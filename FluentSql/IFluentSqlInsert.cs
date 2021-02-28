@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 
-namespace MultiTableRepositoryTest.Extensions.FluentSql
+namespace MultiTableRepository.FluentSql
 {
     public interface IFluentSqlInsert<T> : IFluentSqlBase<IFluentSqlInsert<T>>, IFluentSqlWriter
     {

@@ -1,10 +1,10 @@
-﻿using Dapper;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using Dapper;
 
-namespace MultiTableRepositoryTest.Extensions.FluentSql.Implementation
+namespace MultiTableRepository.FluentSql.Implementation
 {
     internal class FLuentSqlSelect<T> : BaseFluentSql<IFluentSqlSelect<T>>, IFluentSqlSelect<T>
     {
