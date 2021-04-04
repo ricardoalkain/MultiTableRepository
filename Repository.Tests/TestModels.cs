@@ -16,7 +16,6 @@ namespace Repository.Tests
         [Segment(0)]
         public string Country { get; set; }
 
-
         [Segment(2)]
         public string Portfolio { get; set; }
 

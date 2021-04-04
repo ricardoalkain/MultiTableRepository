@@ -1,10 +1,7 @@
-﻿namespace MultiTableRepository.Fluent
+﻿namespace SimpleFluentSql
 {
-    public interface IFluentSqlUpdate<T> : IFluentSqlBase<IFluentSqlUpdate<T>>, IFluentSqlWriter, IFluentWhere<IFluentSqlUpdate<T>>
+    public interface IFluentSqlUpdate : IFluentSqlCommon<IFluentSqlUpdate>, IFluentSqlWhere<IFluentSqlUpdate>, IFluentSqlColumns<IFluentSqlUpdate>
     {
-        IFluentSqlUpdate<T> Set(params string[] columnNames);
-        IFluentSqlUpdate<T> Set(string columnName, object paramValue);
-
-        //IFluentSqlSelect<T> FromQuery(string tableName);
+        //TODO: IFluentSqlSelect<T> FromQuery(string tableName); (as insert)
     }
 }

@@ -2,10 +2,10 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace MultiTableRepository.Fluent
+namespace SimpleFluentSql
 {
-    public interface IFluentSqlDelete : IFluentSqlWriter, IFluentWhere<IFluentSqlDelete>, IFluentSqlBase<IFluentSqlDelete>
+    public interface IFluentSqlDelete : IFluentSqlWhere<IFluentSqlDelete>, IFluentSqlCommon<IFluentSqlDelete>
     {
-        long All();
+        IFluentSqlDelete All();
     }
 }

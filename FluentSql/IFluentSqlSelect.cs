@@ -1,21 +1,21 @@
 ﻿using System.Collections.Generic;
 
-namespace MultiTableRepository.Fluent
+namespace SimpleFluentSql
 {
-    public interface IFluentSqlSelect<T> : IFluentSqlBase<IFluentSqlSelect<T>>, IFluentWhere<IFluentSqlSelect<T>>
+    public interface IFluentSqlSelect : IFluentSqlCommon<IFluentSqlSelect>, IFluentSqlWhere<IFluentSqlSelect>
     {
-        IFluentSqlSelect<T> Join(string table, string conditions);
-        IFluentSqlSelect<T> Join(string joinClause);
+        IFluentSqlSelect Distinct();
 
-        IFluentSqlSelect<T> Top(int rows);
-        IFluentSqlSelect<T> Distinct();
-        IFluentSqlSelect<T> WithNoLock();
-        IFluentSqlSelect<T> OrderBy(params string[] columns);
-        IFluentSqlSelect<T> Paging(int pageNumber, int pageSize, params string[] orderByColumns);
+        IFluentSqlSelect Columns(params string[] customColumns);
 
-        IEnumerable<T> Query();
-        IEnumerable<T> Query(int numberOfRows);
-        T QueryOne();
+        IFluentSqlSelect WithNoLock();
+
+        IFluentSqlSelect OrderBy(params string[] columns);
+
+        IFluentSqlSelect Page(int pageNumber);
+        IFluentSqlSelect Page(int pageNumber, int pageSize);
+        IFluentSqlSelect Page(int pageNumber, int pageSize, params string[] orderByColumns);
+        IFluentSqlSelect Page(int pageNumber, params string[] orderByColumns);
     }
 
 }

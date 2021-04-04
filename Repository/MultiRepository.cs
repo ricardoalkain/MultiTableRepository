@@ -3,8 +3,8 @@ using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
 using System.Data.SqlClient;
-using MultiTableRepository.Fluent;
-using MultiTableRepository.Parser.V1;
+using SimpleFluentSql;
+using MultiTableRepository.Parser;
 
 namespace MultiTableRepository.Repositories
 {
@@ -49,22 +49,21 @@ namespace MultiTableRepository.Repositories
 
 
 
-        protected IFluentSql<T> For(params string[] segments)
-        {
-            var info = MultiTableParser.GetTableInfo(typeof(T), segments);
-            return FluentSql.CreateFluentSql<T>(Connection, info as Fluent.ITableInfo);
-        }
+        ////////////////protected IFluentSql<T> For(params string[] segments)
+        ////////////////{
+        ////////////////    //var info = MultiTableParser.GetTableInfo<T>(segments);
+        ////////////////    //return FluentSql.CreateFluentSql<T>(Connection, info);
+        ////////////////}
 
-        protected IFluentSqlAutoExec<T> For(T entity)
-        {
-            var info = MultiTableParser.GetTableInfo(entity);
-            return FluentSql.CreateFluentSql<T>(Connection, info as Fluent.ITableInfo, entity);
-        }
+        ////////////////protected IFluentSqlAutoExec<T> For(T entity)
+        ////////////////{
+        ////////////////    //var info = MultiTableParser.GetTableInfo(entity);
+        ////////////////    //return FluentSql.CreateFluentSql<T>(Connection, info, entity);
+        ////////////////}
 
-        protected IFluentSqlAutoExec<T> ForMany(IEnumerable<T> entities)
-        {
-            throw new NotImplementedException();
-        }
+        ////////////////protected IFluentSqlAutoExec<T> ForMany(IEnumerable<T> entities)
+        ////////////////{
+        ////////////////}
 
 
 
@@ -80,7 +79,7 @@ namespace MultiTableRepository.Repositories
         /// <returns>Return the ID of the Entity.</returns>
         public long Add(T entity)
         {
-            return For(entity).InsertAndGetId(); /////// Carry entity into context
+            return 0; // For(entity).InsertAndGetId(); /////// Carry entity into context
         }
 
         /// <summary>
@@ -91,12 +90,13 @@ namespace MultiTableRepository.Repositories
         /// <param name="entities">Entity to be saved</param>
         public virtual void Add(IEnumerable<T> entities)
         {
-            // ForMany(entities).InsertAll(); // <---- Optimize performance over 5000
+            //TODO: ForMany(entities).InsertAll();
 
-            foreach (var entity in entities)
-            {
-                For(entity).InsertIt();
-            }
+
+            //foreach (var entity in entities)
+            //{
+            //    For(entity).InsertIt();
+            //}
         }
 
         /// <summary>
@@ -106,7 +106,7 @@ namespace MultiTableRepository.Repositories
         /// <returns>return true is successful </returns>
         public bool Remove(T entity)
         {
-            return For(entity).DeleteIt();
+            return false; // For(entity).DeleteIt();
         }
 
         /// <summary>
@@ -116,7 +116,7 @@ namespace MultiTableRepository.Repositories
         /// <returns>returns <see cref="T"/> or wise null</returns>
         public T Get(int id, params string[] segments)
         {
-            return For(segments).Select().Only(id).QueryOne();
+            return null; // For(segments).Select().Only(id).QueryOne();
         }
 
         /// <summary>
@@ -125,7 +125,7 @@ namespace MultiTableRepository.Repositories
         /// <returns></returns>
         public IEnumerable<T> GetAll(params string[] segments)
         {
-            return For(segments).Select().Query();
+            return null; // For(segments).Select().Query();
         }
 
         /// <summary>
@@ -135,7 +135,7 @@ namespace MultiTableRepository.Repositories
         /// <returns>return true is successful </returns>
         public bool Update(T entity)
         {
-            return For(entity).UpdateIt();
+            return false; // For(entity).UpdateIt();
         }
 
         public void Dispose()

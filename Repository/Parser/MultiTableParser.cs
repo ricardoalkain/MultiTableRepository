@@ -5,199 +5,105 @@ using System.Reflection;
 using System.Text;
 using Dapper.Contrib.Extensions;
 using MultiTableRepository.Attributes;
-using MultiTableRepository.Parser.V1;
+using SimpleFluentSql;
 
-namespace MultiTableRepository.Parser.V1
+namespace MultiTableRepository.Parser
 {
-    [Obsolete]
-    public static class MultiTableParser
+    public static partial class MultiTableParser
     {
-        private class TableInfo : ITableInfoV1  //TODO: Join with CacheEntry
-        {
-            private readonly CacheEntry cached;
+        internal const string SEGMENT_SEPARATOR = "_";
 
-            public TableInfo(CacheEntry cacheEntry, string suffix)
-            {
-                TableSuffix = suffix;
-                cached = cacheEntry;
-            }
-
-            public string TableSuffix { get; set; }
-
-            public string TableName => $"{TablePrefix}_{TableSuffix}";
-
-            public Type EntityType => cached.EntityType;
-
-            public string TablePrefix => cached.TablePrefix;
-
-            public PropertyInfo KeyProperty => cached.KeyProperty;
-
-            public IReadOnlyList<PropertyInfo> Segments => cached.Segments;
-
-            public bool HasVariants => cached.HasVariants;
-
-            public IReadOnlyList<PropertyInfo> AllColumns => cached.AllColumns;
-
-            public IReadOnlyList<PropertyInfo> DataColumns => cached.DataColumns;
-
-            public string SqlSelectColumnsText => cached.SqlSelectColumnsText;
-
-            public string SqlInsertColumnNames => cached.SqlInsertColumnNames;
-
-            public string SqlInsertColumnValues => cached.SqlInsertColumnValues;
-
-            public string SqlUpdateColumnsText => cached.SqlUpdateColumnsText;
-        }
-
-        private class CacheEntry
-        {
-            public Type EntityType { get; set; }
-
-            public string TablePrefix { get; set; }
-
-            public PropertyInfo KeyProperty { get; set; }
-
-            public IReadOnlyList<PropertyInfo> Segments { get; set; }
-
-            public IReadOnlyList<PropertyInfo> AllColumns { get; set; }
-
-            public IReadOnlyList<PropertyInfo> DataColumns { get; set; }
-
-            public string SqlSelectColumnsText { get; set; }
-
-            public string SqlInsertColumnNames { get; set; }
-
-            public string SqlInsertColumnValues { get; set; }
-
-            public string SqlUpdateColumnsText { get; set; }
-
-            public bool HasVariants { get; set; }
-
-            public Dictionary<string, ITableInfoV1> Variants = new Dictionary<string, ITableInfoV1>(); //TODO: Create only if needed
-
-        }
-
-        private static Dictionary<Type, CacheEntry> Cache { get; } = new Dictionary<Type, CacheEntry>();
-
-        #region Public Members
+        #region Public Methods
 
         /// <summary>
-        /// Retrieve information about the tables where entities of this type are persisted
-        /// and how the respective columns are configured.
+        /// Loads information about a database table for the model class <typeparamref name="T"/> configured
+        /// as multi-table, using the values in <paramref name="entity"/> to find the correct segments.
         /// </summary>
-        /// <param name="type">Type of entities associated to the table.</param>
-        /// <param name="segments">List of strings used to separate data in different individual tables.</param>
-        /// <returns><see cref="ITableInfoV1"/> object containing information about the tables and columns.</returns>
-        public static ITableInfoV1 GetTableInfo(Type type, params string[] segments)
+        /// <typeparam name="T">Model class configured with <see cref="MultiTableAttribute"/> and
+        /// <see cref="SegmentAttribute"/></typeparam>.
+        /// <param name="entity">Objec containing values to define the targe table segments.</param>
+        /// <returns><see cref="IMultiTableInfo"/> object containing information about the target table.</returns>
+        public static IMultiTableInfo GetTableInfo<T>(T entity)
         {
-            if (Cache.TryGetValue(type, out CacheEntry entry))
+            if(entity == null)
             {
-                if (entry.HasVariants)
+                throw new ArgumentNullException(nameof(entity));
+            }
+
+            if (Cache.TryGetValue(typeof(T), out var parent))
+            {
+                var segements = GetSegmentsValues(parent.SegmentProperties, entity);
+                var suffix = GetSuffix(segements);
+                if (parent.Items.TryGetValue(suffix, out var item))
                 {
-                    var suffix = GetTableSuffix(segments);
-                    if (entry.Variants.TryGetValue(suffix, out var variant))
-                    {
-                        return variant;
-                    }
+                    return item;
                 }
                 else
                 {
-                    return ParseTypeAndSegments(type, segments);
+                    return CreateAndCacheItem(parent, segements);
                 }
             }
-
-            return ParseTypeAndSegments(type, segments);
-        }
-
-        /// <summary>
-        /// Retrieve information about the tables where entities of this type are persisted
-        /// and how the respective columns are configured.
-        /// </summary>
-        /// <typeparam name="T">Type of entities associated to the table.</typeparam>
-        /// <returns><see cref="ITableInfoV1"/> object containing information about the tables and columns.</returns>
-        public static ITableInfoV1 GetTableInfo<T>()
-        {
-            return GetTableInfo(default(T));
-        }
-
-        /// <summary>
-        /// Retrieve information about the tables where entities of this type are persisted
-        /// and how the respective columns are configured.
-        /// </summary>
-        /// <typeparam name="T">Type of entities associated to the table.</typeparam>
-        /// <param name="entity">Object containing segment properties to define which table it belongs to.</param>
-        /// <returns><see cref="ITableInfoV1"/> object containing information about the tables and columns.</returns>
-        public static ITableInfoV1 GetTableInfo<T>(T entity)
-        {
-            var type = typeof(T);
-
-            if (Cache.TryGetValue(type, out CacheEntry entry))
+            else
             {
-                var suffix = GetTableSuffix(entity, entry);
+                return ParsePropertiesAndAttributes(entity);
+            }
+        }
 
-                if (!string.IsNullOrEmpty(suffix) && entry.HasVariants)
+        /// <summary>
+        /// Loads information about a database table for the model class <typeparamref name="T"/> configured
+        /// as multi-table, using the passed comma-separated list of string as segment values.
+        /// </summary>
+        /// <typeparam name="T">Model class configured with <see cref="MultiTableAttribute"/> and
+        /// <see cref="SegmentAttribute"/></typeparam>.
+        /// <param name="segments">Strings used to define the targe table segments.</param>
+        /// <returns><see cref="IMultiTableInfo"/> object containing information about the target table.</returns>
+        public static IMultiTableInfo GetTableInfo<T>(params string[] segments)
+        {
+            if(segments == null || segments.Length == 0)
+            {
+                throw new ArgumentNullException(nameof(segments));
+            }
+
+            if (Cache.TryGetValue(typeof(T), out var parent))
+            {
+                var suffix = GetSuffix(segments);
+                if (parent.Items.TryGetValue(suffix, out var item))
                 {
-                    if (entry.Variants.TryGetValue(suffix, out var variant))
-                    {
-                        return variant;
-                    }
-                    else
-                    {
-                        return ParseTypeAndSegments(entity);
-                    }
+                    return item;
                 }
                 else
                 {
-                    return new TableInfo(entry, suffix); //TODO: Cache non-variant suffixed tables
+                    return CreateAndCacheItem(parent, segments);
                 }
             }
-
-            ParsePropertiesAndAttributes(type);
-            return GetTableInfo(entity);
-        }
-
-        /// <summary>
-        /// Returns an array of strings containing values used to create a table suffix,
-        /// according to <see cref="SegmentAttribute"/> in the provided entity.
-        /// </summary>
-        /// <typeparam name="T">Type of entities associated to the table.</typeparam>
-        /// <param name="entity">Object containing segment properties to define which table it belongs to.</param>
-        /// <returns>Array of strings.</returns>
-        public static string[] GetSegments<T>(T entity)
-        {
-            if (entity == null)
+            else
             {
-                throw new ArgumentNullException($"{nameof(GetSegments)}: Entity can't be null.");
+                return ParsePropertiesAndAttributes<T>(default, segments);
             }
-
-            if (!Cache.TryGetValue(typeof(T), out var entry))
-            {
-                entry = ParsePropertiesAndAttributes(typeof(T));
-            }
-
-            return GetSegments(entity, entry);
         }
 
         #endregion
 
+        #region Parsing
 
-
-
-
-        private static CacheEntry ParsePropertiesAndAttributes(Type type)
+        private static CacheItem ParsePropertiesAndAttributes<T>(T entity, string[] segments = null)
         {
+            var type = typeof(T);
+
             var segProps = new SortedDictionary<int, PropertyInfo>();
             var dataProps = new List<PropertyInfo>();
             var allProps = new List<PropertyInfo>();
+            var ignoreProps = new Dictionary<PropertyInfo, IEnumerable<string[]>>();
+            var exclusiveProps = new Dictionary<PropertyInfo, IEnumerable<string[]>>();
             var keyProp = default(PropertyInfo);
             var hasVariants = false;
 
-            //?? Use TableAttibute or use custom MultiTableAttribute to avoid clash?
+
             var tablePrefix = type.GetCustomAttribute<MultiTableAttribute>()?.TableNamePrefix?.ToUpper();
 
             if (tablePrefix == null)
             {
-                throw new Exception($"Table name not defined for {type.FullName}. Missing {nameof(MultiTableAttribute)}.");
+                throw new Exception($"Table name not defined for {type.FullName}. Missing {nameof(MultiTableAttribute)}(\"TABLE_PREFIX\").");
             }
 
             var propertyInfos = type.GetProperties();
@@ -208,7 +114,7 @@ namespace MultiTableRepository.Parser.V1
                 {
                     if (keyProp != null)
                     {
-                        throw new Exception($"Multi-table entity {type.FullName} can't have more than one {nameof(KeyAttribute)}.");
+                        throw new Exception($"Multi-table entity {type.FullName} can't have more than one {nameof(KeyAttribute)}."); //TODO: Support for multi-keys?
                     }
 
                     keyProp = info;
@@ -231,18 +137,29 @@ namespace MultiTableRepository.Parser.V1
                     }
                 }
 
-                if (!hasVariants)
+                // Variable columns (Ignored and exclusive)
+                var ignoredSegments = info.GetCustomAttributes<IgnoreForAttribute>(false).Select(a => a.Segments);
+                var exclusiveSegments = info.GetCustomAttributes<ExclusiveForAttribute>(false).Select(a => a.Segments);
+
+                if (ignoredSegments.Any())
                 {
-                    // Tables have different structure depending on the segment
-                    hasVariants = info.IsDefined(typeof(IgnoreForAttribute), false);
+                    ignoreProps.Add(info, ignoredSegments);
                 }
 
-                if (info.GetSetMethod() != null && !info.IsDefined(typeof(ComputedAttribute), false))
+                if (exclusiveSegments.Any())
+                {
+                    exclusiveProps.Add(info, exclusiveSegments);
+                }
+
+                hasVariants = hasVariants || ignoreProps.Any() || exclusiveProps.Any();
+
+                // Writable columns
+                if (info.GetSetMethod() != null && !info.IsDefined(typeof(ComputedAttribute), false) && !info.IsDefined(typeof(SegmentAttribute), false))
                 {
                     dataProps.Add(info);
                 }
 
-                allProps.Add(info);
+                allProps.Add(info); //TODO: remove variant columns
             }
 
             if (segProps.Count == 0)
@@ -252,148 +169,183 @@ namespace MultiTableRepository.Parser.V1
 
             if (dataProps.Count == 0)
             {
-                throw new Exception($"Entity {type.FullName} has no writable columns. Remember columns with {nameof(KeyAttribute)}, {nameof(ComputedAttribute)} or {nameof(SegmentAttribute)} are read-only.");
+                throw new Exception($"Entity {type.FullName} has no writable columns. Remember columns with {nameof(KeyAttribute)} (identity), {nameof(ComputedAttribute)} or {nameof(SegmentAttribute)} are read-only.");
             }
 
-            var cacheEntry = new CacheEntry
+            if (segments == null)
+            {
+                if (entity == null)
+                {
+                    throw new ArgumentNullException(nameof(entity));
+                }
+                segments = GetSegmentsValues(segProps.Values, entity);
+            }
+
+            var header = new CacheHeader
             {
                 EntityType = type,
                 TablePrefix = tablePrefix,
                 KeyProperty = keyProp,
-                Segments = segProps.Values.ToList(),
                 HasVariants = hasVariants,
-                AllColumns = allProps,
-                DataColumns = dataProps
+                AllProperties = allProps,
+                WritableProperties = dataProps,
+                SegmentProperties = segProps.Values.ToList(),
+                KeyColumn = keyProp.Name,
+                AllColumns = allProps.Select(p => p.Name).ToList(),
+                WritableColumns = dataProps.Select(p => p.Name).ToList(),
+                SegmentColumns = segProps.Values.Select(p => p.Name).ToList(),
+                IgnoredSegments = ignoreProps,
+                ExclusiveSegments = exclusiveProps,
             };
-            BuildSqlTextTemplates(cacheEntry);
 
-            Cache[type] = cacheEntry;
+            var item = CreateAndCacheItem(header, segments);
 
-            return cacheEntry;
+            //Main entry
+            Cache.Add(type, header);
+
+            return item;
         }
 
-        private static ITableInfoV1 ParseTypeAndSegments<T>(T entity)
+        private static CacheItem CreateAndCacheItem(CacheHeader parent, string[] segments) // TODO: Move to CacheHeader class when decopling
         {
-            var segments = GetSegments(entity);
-            return ParseTypeAndSegments(typeof(T), segments);
+            if (segments == null || segments.Length != parent.SegmentProperties.Count) //TODO: Optional segments?
+            {
+                throw new ArgumentOutOfRangeException(nameof(segments), $"Multi-table model '{parent.EntityType.FullName}' requires {parent.SegmentProperties.Count} segment(s) but {segments.Length} was provided.");
+            }
+
+            var suffix = GetSuffix(segments);
+
+            var item = new CacheItem(parent)
+            {
+                TableName = parent.TablePrefix + SEGMENT_SEPARATOR + suffix,
+                TableSuffix = suffix,
+                Columns = parent.AllColumns.ToList(),
+                WritableCols = parent.WritableColumns.ToList(),
+                WritableProperties = parent.WritableProperties.ToList(),
+                AllProperties = parent.AllProperties.ToList(),
+            };
+
+            if (parent.HasVariants)
+            {
+                SetVariant(item, segments);
+            }
+
+            parent.Items.Add(suffix, item);
+
+            return item;
         }
 
-        private static ITableInfoV1 ParseTypeAndSegments(Type type, params string[] segments)
+
+        private static void SetVariant(CacheItem item, string[] segments) // TODO: Move to CacheItem class when decopling
         {
-            if (!Cache.TryGetValue(type, out var info))
+            if (segments == null || !segments.Any())
             {
-                info = ParsePropertiesAndAttributes(type);
+                throw new ArgumentNullException(nameof(segments));
             }
 
-            var tableSuffix = GetTableSuffix(segments);
-
-            if (info.Segments.Count != segments.Length) // TODO: Support optional segments
+            var removed = new List<PropertyInfo>();
+            foreach (var prop in item.AllProperties)
             {
-                throw new ArgumentOutOfRangeException($"{nameof(ParseTypeAndSegments)}: Table suffix {tableSuffix} has an incorrect number of segments for type {type.Name}.");
-            }
-
-            if (info.HasVariants)
-            {
-                if(info.Variants.TryGetValue(tableSuffix, out var cachedVariant))
+                if (removed.Contains(prop))
                 {
-                    return cachedVariant;
+                    continue;
                 }
-            }
 
-            //Type already parsed but not for this specific set of segments
-            var varDataProps = new List<PropertyInfo>(info.DataColumns);
-            var varAllProps = new List<PropertyInfo>(info.AllColumns);
-            foreach (var prop in info.DataColumns)
-            {
-                var ignoreAttrs = prop.GetCustomAttributes<IgnoreForAttribute>();
-                foreach (var attr in ignoreAttrs)
+                // If segments match, remove this property
+                if (item.Parent.IgnoredSegments.TryGetValue(prop, out var ignoredSegments))
                 {
-                    // If attribute provides more segments than configured, does not match
-                    if (attr.Segments.Length <= segments.Length)
+                    var ignoreProp = false;
+
+                    foreach (var seg in ignoredSegments)
                     {
-                        var match = false;
-                        for (int i = 0; i < attr.Segments.Length; i++)
+                        var ignore = true;
+                        for (int i = 0; i < segments.Length; i++)
                         {
-                            match = match && (
-                                attr.Segments[i] == null ||
-                                attr.Segments[i] == "*" ||
-                                attr.Segments[i].Equals(segments[i])
-                            );
+                            if (seg.Length <= i)
+                            {
+                                break;
+                            }
+
+                            if (seg[i] == null)
+                            {
+                                continue;
+                            }
+
+                            ignore = ignore && (seg[i].Equals(segments[i], StringComparison.OrdinalIgnoreCase));
                         }
 
-                        if (match)
+                        ignoreProp = ignoreProp || ignore;
+                    }
+
+                    if (ignoreProp)
+                    {
+                        removed.Add(prop);
+                    }
+                }
+
+                // If segments match, keep this property
+                if (item.Parent.ExclusiveSegments.TryGetValue(prop, out var exclusiveSegments))
+                {
+                    var keepProp = false;
+
+                    foreach (var exSegs in exclusiveSegments)
+                    {
+                        var keep = true;
+
+                        for (int i = 0; i < segments.Length; i++)
                         {
-                            varDataProps.Remove(prop);
-                            varAllProps.Remove(prop);
-                            break;
+                            if (exSegs.Length <= i)
+                            {
+                                break;
+                            }
+
+                            if (exSegs[i] == null)
+                            {
+                                continue;
+                            }
+
+                            keep = keep && (exSegs[i].Equals(segments[i], StringComparison.OrdinalIgnoreCase));
                         }
+
+                        keepProp = keepProp || keep;
+                    }
+
+                    if (!keepProp)
+                    {
+                        removed.Add(prop);
                     }
                 }
             }
 
-            var newEntry = new CacheEntry
-            {
-                EntityType = type,
-                TablePrefix = info.TablePrefix,
-                KeyProperty = info.KeyProperty,
-                Segments = info.Segments,
-                HasVariants = true,
-                AllColumns = varAllProps,
-                DataColumns = varDataProps
-            };
+            // Copy property lists to break reference with parent lists
+            var all = item.Parent.AllProperties.ToList();
+            var wri = item.Parent.WritableProperties.ToList();
 
-            BuildSqlTextTemplates(newEntry);
-
-            if (info.Variants == null)
+            foreach (var prop in removed)
             {
-                info.Variants = new Dictionary<string, ITableInfoV1>();
+                all.Remove(prop);
+                wri.Remove(prop);
             }
 
-            var variant = new TableInfo(newEntry, tableSuffix);
-            info.Variants[tableSuffix] = variant;
-            return variant;
-        }
-
-        private static void BuildSqlTextTemplates(CacheEntry info)
-        {
-            const string COMMA = ", ";
-            info.SqlSelectColumnsText = string.Join(COMMA, info.AllColumns.Select(p => p.Name));
-
-            var dataCols = info.DataColumns.Select(p => p.Name);
-            info.SqlInsertColumnNames = $" ({string.Join(COMMA, dataCols)})";
-            info.SqlInsertColumnValues = $" VALUES (@{string.Join(", @", dataCols)}) ";
-
-            var sb = new StringBuilder();
-            for (int i = 0; i < info.DataColumns.Count; i++)
+            if (all.Count != item.AllProperties.Count())
             {
-                if (i > 0) sb.AppendLine(COMMA).Append(' ', 4);
-
-                var name = info.DataColumns[i].Name;
-                sb.Append(name).Append(" = @").Append(name);
+                item.AllProperties = all;
+                item.Columns = all.Select(p => p.Name).ToList();
+                item.WritableProperties = wri;
+                item.WritableCols = wri.Select(p => p.Name).ToList();
             }
-            info.SqlUpdateColumnsText = sb.ToString();
         }
 
-
-
-
-
-        private static string[] GetSegments<T>(T entity, CacheEntry entry)
+        private static string GetSuffix(params string[] segments)
         {
-            return entry.Segments.Select(s => s.GetValue(entity)?.ToString()).ToArray();
+            return string.Join(SEGMENT_SEPARATOR, segments);
         }
-
-        private static string GetTableSuffix<T>(T entity, CacheEntry entry)
+        private static string[] GetSegmentsValues<T>(IEnumerable<PropertyInfo> segProps, T entity) // TODO: Move to CacheHeader class when decopling
         {
-            if (entity == null) return null;
-
-            return string.Join("_", GetSegments(entity, entry));
+            return segProps.Select(p => p.GetValue(entity)?.ToString()).ToArray();
         }
 
-        private static string GetTableSuffix(params string[] segments)
-        {
-            return string.Join("_", segments).ToUpper();
-        }
+        #endregion
     }
 }
 
